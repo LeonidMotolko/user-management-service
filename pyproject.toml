@@ -7,7 +7,10 @@ authors = [
     { name = "seachran", email = "motolko.leonid.1980@gmail.com" }
 ]
 requires-python = ">=3.13"
-dependencies = []
+dependencies = [
+    "pydantic>=2.13.4",
+    "sqlalchemy>=2.0.52",
+]
 
 [project.scripts]
 user-management-service = "user_management_service:main"
@@ -18,7 +21,9 @@ build-backend = "uv_build"
 
 [dependency-groups]
 dev = [
+    "alembic>=1.19.1",
     "pre-commit>=4.6.1",
+    "pytest>=9.1.1",
     "ruff>=0.16.1",
     "ty>=0.0.68",
 ]
