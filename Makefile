@@ -1,4 +1,4 @@
-.PHONY: install-dev lint format run help
+.PHONY: install-dev lint format run help check
 
 help:
 	@echo "Available commands:"
@@ -6,6 +6,7 @@ help:
 	@echo "  make lint        - Run Ruff and Ty"
 	@echo "  make format      - Format code with Ruff"
 	@echo "  make run         - Run the application"
+	@echo "  make check       - Check the project with all pre-commit hooks"
 
 install-dev:
 	uv sync --group dev
@@ -19,3 +20,6 @@ format:
 
 run:
 	uv run user-management-service
+
+check:
+	uv run pre-commit run --all-files

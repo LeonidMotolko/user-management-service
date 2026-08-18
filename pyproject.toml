@@ -24,14 +24,23 @@ dev = [
 ]
 
 [tool.ruff]
-line-length = 88
+line-length = 120
 target-version = "py313"
 
 [tool.ruff.lint]
-select = ["E", "F", "I"]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warning
+    "F",   # pyflakes
+    "I",   # isort (import sorting)
+    "B",   # flake8-bugbear (bugs serch)
+    "UP",  # pyupgrade (update syntax)
+    "SIM", # simplify code
+    "FAST" # rules for FastAPI
+]
 
 [tool.ty.environment]
 python-version = "3.13"
 
 [tool.ty.src]
-include = ["."]
+include = ["scr"]
