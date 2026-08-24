@@ -1,14 +1,14 @@
-from dataclasses import dataclass
 from datetime import datetime
 from typing import Optional
 from uuid import UUID
+
+from pydantic import BaseModel
 
 from user_management_service.domain.entities.group import Group
 from user_management_service.domain.entities.role import Role
 
 
-@dataclass
-class User:
+class User(BaseModel):
     id: UUID
     name: str
     surname: str
