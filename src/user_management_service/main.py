@@ -1,9 +1,9 @@
-# тут будет точка входа в FastAPI, пока так
+from fastapi import FastAPI
 
+from user_management_service.presentation.api.v1.users import (
+    router as users_router,
+)
 
-def main() -> None:
-    print("Hello from user-management-service!")
+app = FastAPI(title="User Management Service")
 
-
-if __name__ == "__main__":
-    main()
+app.include_router(users_router, prefix="/api/v1")
