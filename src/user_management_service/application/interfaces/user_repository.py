@@ -1,7 +1,24 @@
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
+from typing import Literal
 from uuid import UUID
 
 from user_management_service.domain.entities.user import User
+
+SortField = Literal["name", "surname", "username", "email", "created_at"]
+OrderDirection = Literal["asc", "desc"]
+
+
+@dataclass(frozen=True, slots=True)
+class UserListFilter:
+    page: int = 1
+    limit: int = 30
+    filter_by_name: str | None = None
+    sort_by: SortField = "created_at"
+    order_by: OrderDirection = "asc"
+    # None = без ограничения по группе (для ADMIN); задаётся для MODERATOR
+    group_id: int | None = None
+    restrict_to_group: bool = False
 
 
 class IUserRepository(ABC):
@@ -28,3 +45,8 @@ class IUserRepository(ABC):
     @abstractmethod
     async def delete(self, user_id: UUID) -> bool:
         """Delete user by ID."""
+
+    @abstractmethod
+    async def list_users(self, filters: UserListFilter) -> tuple[list[User], int]:
+        """Return a page of users matching the filters, and the total count
+        (total ignores pagination but respects name filter and group restriction)."""
