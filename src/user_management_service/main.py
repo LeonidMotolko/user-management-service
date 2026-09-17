@@ -1,4 +1,6 @@
 import traceback
+from collections.abc import AsyncGenerator
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
@@ -8,6 +10,9 @@ from user_management_service.domain.exceptions import (
     GroupNotFoundError,
     UserAlreadyExistsError,
     UserNotFoundError,
+)
+from user_management_service.infrastructure.messaging.connection import (
+    close_rabbitmq_connection,
 )
 from user_management_service.presentation.api.v1.auth import (
     router as auth_router,
@@ -19,10 +24,18 @@ from user_management_service.presentation.api.v1.users import (
     router as users_router,
 )
 
+
+@asynccontextmanager
+async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
+    yield
+    await close_rabbitmq_connection()
+
+
 app = FastAPI(
     title="User Management Service",
     description="Production-grade user management microservice with Clean Architecture",
     version="0.1.0",
+    lifespan=lifespan,
 )
 
 app.include_router(auth_router, prefix="/api/v1")
@@ -43,7 +56,7 @@ async def conflict_handler(request: Request, exc: DomainError):
 
 @app.exception_handler(Exception)
 async def unhandled_exception_handler(request: Request, exc: Exception):
-    # TODO: убрать print() и завести нормальный logger после того, как найдём причину 500
+    # TODO: убрать print() и завести нормальный logger после 500
     print("=" * 80)
     print(f"UNHANDLED EXCEPTION on {request.method} {request.url}")
     traceback.print_exc()
