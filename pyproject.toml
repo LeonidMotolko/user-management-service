@@ -8,6 +8,7 @@ authors = [
 ]
 requires-python = ">=3.13"
 dependencies = [
+    "aio-pika>=9.5.5",
     "alembic>=1.19.1",
     "asyncpg>=0.31.0",
     "email-validator>=2.2.0",
@@ -17,7 +18,6 @@ dependencies = [
     "pyjwt>=2.13.0",
     "redis>=8.1.0",
     "sqlalchemy>=2.0.52",
-    "email-validator>=2.2.0"
 ]
 
 [project.scripts]
@@ -33,13 +33,20 @@ dev = [
     "httpx>=0.28.1",
     "pre-commit>=4.6.1",
     "pytest>=9.1.1",
-    "pytest-asyncio>=1.4.0",
+    "pytest-asyncio>=1.0.0",
     "ruff>=0.16.1",
     "ty>=0.0.68",
 ]
 
 [tool.ruff]
 line-length = 120
+target-version = "py313"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "session"
+asyncio_default_test_loop_scope = "session"
+testpaths = ["tests"]
 target-version = "py313"
 
 [tool.ruff.lint]
