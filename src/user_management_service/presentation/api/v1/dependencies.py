@@ -8,6 +8,9 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from user_management_service.application.interfaces.message_publisher import (
+    IMessagePublisher,
+)
 from user_management_service.application.interfaces.password_hasher import (
     IPasswordHasher,
 )
@@ -32,6 +35,9 @@ from user_management_service.application.use_cases.login_user import (
 from user_management_service.application.use_cases.refresh_token import (
     RefreshTokenUseCase,
 )
+from user_management_service.application.use_cases.request_password_reset import (
+    RequestPasswordResetUseCase,
+)
 from user_management_service.application.use_cases.update_user import (
     UpdateUserUseCase,
 )
@@ -40,6 +46,12 @@ from user_management_service.domain.entities.role import Role
 from user_management_service.domain.entities.user import User
 from user_management_service.infrastructure.database.session import (
     get_async_session,
+)
+from user_management_service.infrastructure.messaging.connection import (
+    get_rabbitmq_connection,
+)
+from user_management_service.infrastructure.messaging.rabbitmq_publisher import (
+    RabbitMQPublisher,
 )
 from user_management_service.infrastructure.repositories.sqlalchemy_user_repository import (
     SQLAlchemyUserRepository,
@@ -153,6 +165,24 @@ def get_list_users_use_case(
     return ListUsersUseCase(user_repo=user_repo)
 
 
+async def get_message_publisher() -> IMessagePublisher:
+    connection = await get_rabbitmq_connection()
+    return RabbitMQPublisher(connection)
+
+
+def get_request_password_reset_use_case(
+    user_repo: Annotated[IUserRepository, Depends(get_user_repository)],
+    jwt_service: Annotated[JWTService, Depends(get_jwt_service)],
+    message_publisher: Annotated[IMessagePublisher, Depends(get_message_publisher)],
+) -> RequestPasswordResetUseCase:
+    return RequestPasswordResetUseCase(
+        user_repo=user_repo,
+        jwt_service=jwt_service,
+        message_publisher=message_publisher,
+        reset_password_base_url=settings.FRONTEND_RESET_PASSWORD_URL,
+    )
+
+
 # --- Auth Guard ---
 
 
@@ -195,7 +225,6 @@ async def get_current_user(
 
 
 def require_roles(*allowed_roles: Role):
-    """Dependency factory: пускает только пользователей с одной из ролей."""
 
     async def dependency(
         current_user: Annotated[User, Depends(get_current_user)],
@@ -215,8 +244,6 @@ async def require_admin_or_same_group(
     current_user: Annotated[User, Depends(get_current_user)],
     user_repo: Annotated[IUserRepository, Depends(get_user_repository)],
 ) -> User:
-    """Guard для GET /user/<user_id>: ADMIN видит всех,
-    MODERATOR — только пользователей из своей группы."""
     if current_user.role == Role.ADMIN:
         return current_user
 

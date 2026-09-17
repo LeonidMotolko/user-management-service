@@ -29,8 +29,8 @@ build-backend = "uv_build"
 
 [dependency-groups]
 dev = [
+    "aio-pika>=10.0.1",
     "alembic>=1.19.1",
-    "httpx>=0.28.1",
     "pre-commit>=4.6.1",
     "pytest>=9.1.1",
     "pytest-asyncio>=1.0.0",
@@ -47,7 +47,6 @@ asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "session"
 asyncio_default_test_loop_scope = "session"
 testpaths = ["tests"]
-target-version = "py313"
 
 [tool.ruff.lint]
 select = [
