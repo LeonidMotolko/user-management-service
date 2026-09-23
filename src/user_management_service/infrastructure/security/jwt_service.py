@@ -39,5 +39,15 @@ class JWTService:
         }
         return jwt.encode(payload, self.secret_key, algorithm=self.algorithm)
 
+    def create_password_reset_token(self, user_id: UUID, ttl_minutes: int = 30) -> str:
+        now = datetime.now(UTC)
+        payload = {
+            "sub": str(user_id),
+            "type": "password_reset",
+            "iat": now,
+            "exp": now + timedelta(minutes=ttl_minutes),
+        }
+        return jwt.encode(payload, self.secret_key, algorithm=self.algorithm)
+
     def decode_token(self, token: str) -> dict:
         return jwt.decode(token, self.secret_key, algorithms=[self.algorithm])
