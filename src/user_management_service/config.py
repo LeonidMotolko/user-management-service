@@ -48,6 +48,12 @@ class Settings(BaseSettings):
 
     FRONTEND_RESET_PASSWORD_URL: str = "http://localhost:3000/reset-password"
 
+    AWS_REGION: str = "us-east-1"
+    AWS_S3_BUCKET: str = "user-management-avatars"
+    AWS_ACCESS_KEY_ID: SecretStr | None = None
+    AWS_SECRET_ACCESS_KEY: SecretStr | None = None
+    AWS_S3_ENDPOINT_URL: str | None = None
+
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
 

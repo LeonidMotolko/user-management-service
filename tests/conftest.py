@@ -1,5 +1,6 @@
 from collections.abc import AsyncGenerator, Callable
 from datetime import UTC, datetime
+from unittest.mock import AsyncMock
 from uuid import UUID, uuid4
 
 import pytest
@@ -26,6 +27,10 @@ from user_management_service.infrastructure.security.password_hasher import (
     PBKDF2PasswordHasher,
 )
 from user_management_service.main import app
+from user_management_service.presentation.api.v1.dependencies import (
+    get_message_publisher,
+    get_token_blacklist,
+)
 
 TEST_DB_NAME = "user_db_test"
 
@@ -57,11 +62,23 @@ async def _test_engine():
 
     engine = create_async_engine(TEST_DATABASE_URL)
     async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.drop_all)
         await conn.run_sync(Base.metadata.create_all)
 
     yield engine
 
     await engine.dispose()
+
+
+class InMemoryTokenBlacklist:
+    def __init__(self) -> None:
+        self._ids: set[str] = set()
+
+    async def add(self, token_jti: str, ttl_seconds: int) -> None:
+        self._ids.add(token_jti)
+
+    async def is_blacklisted(self, token_jti: str) -> bool:
+        return token_jti in self._ids
 
 
 @pytest_asyncio.fixture
@@ -85,12 +102,26 @@ async def db_session(_test_engine) -> AsyncGenerator[AsyncSession]:
 
 
 @pytest_asyncio.fixture
-async def client(db_session: AsyncSession) -> AsyncGenerator[AsyncClient]:
+async def message_publisher() -> AsyncMock:
+    return AsyncMock()
+
+
+@pytest_asyncio.fixture
+async def client(db_session: AsyncSession, message_publisher: AsyncMock) -> AsyncGenerator[AsyncClient]:
+    blacklist = InMemoryTokenBlacklist()
 
     async def _override_get_async_session():
         yield db_session
 
+    def _override_token_blacklist():
+        return blacklist
+
+    async def _override_message_publisher():
+        return message_publisher
+
     app.dependency_overrides[get_async_session] = _override_get_async_session
+    app.dependency_overrides[get_token_blacklist] = _override_token_blacklist
+    app.dependency_overrides[get_message_publisher] = _override_message_publisher
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
         yield ac

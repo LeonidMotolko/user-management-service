@@ -31,7 +31,6 @@ async def list_users(
     sort_by: SortField = "created_at",
     order_by: OrderDirection = "asc",
 ):
-    # MODERATOR видит только пользователей своей группы; без группы -- пустой список
     restrict_to_group = current_user.role == Role.MODERATOR
     if restrict_to_group and not current_user.group:
         raise HTTPException(

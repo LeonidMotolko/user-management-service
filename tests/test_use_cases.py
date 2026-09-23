@@ -147,16 +147,13 @@ class TestLoginUserUseCase:
         user_repo = AsyncMock()
         user_repo.get_by_email.return_value = None
         user_repo.get_by_username.return_value = None
+        user_repo.get_by_phone_number.return_value = None
 
         use_case = LoginUserUseCase(user_repo=user_repo, password_hasher=MagicMock(), jwt_service=MagicMock())
 
         with pytest.raises(InvalidCredentialsError):
             await use_case.execute(LoginDTO(login="ghost", password="whatever"))
 
-    @pytest.mark.xfail(
-        reason="IUserRepository пока не умеет искать по phone_number",
-        strict=False,
-    )
     async def test_login_by_phone_number_is_supported(self):
         user = make_domain_user(phone_number="+79990000000")
         user_repo = AsyncMock()
@@ -167,10 +164,27 @@ class TestLoginUserUseCase:
         password_hasher = MagicMock()
         password_hasher.verify.return_value = True
 
-        use_case = LoginUserUseCase(user_repo=user_repo, password_hasher=password_hasher, jwt_service=MagicMock())
+        jwt_service = MagicMock()
+        jwt_service.create_access_token.return_value = "access-token"
+        jwt_service.create_refresh_token.return_value = "refresh-token"
+
+        use_case = LoginUserUseCase(user_repo=user_repo, password_hasher=password_hasher, jwt_service=jwt_service)
 
         result = await use_case.execute(LoginDTO(login="+79990000000", password="pw"))
-        assert result.access_token
+        assert result.access_token == "access-token"
+
+    async def test_login_fails_when_user_is_blocked(self):
+        user = make_domain_user(is_blocked=True)
+        user_repo = AsyncMock()
+        user_repo.get_by_email.return_value = user
+
+        password_hasher = MagicMock()
+        password_hasher.verify.return_value = True
+
+        use_case = LoginUserUseCase(user_repo=user_repo, password_hasher=password_hasher, jwt_service=MagicMock())
+
+        with pytest.raises(InvalidCredentialsError):
+            await use_case.execute(LoginDTO(login="test@example.com", password="pw"))
 
 
 class TestRefreshTokenUseCase:
@@ -194,7 +208,10 @@ class TestRefreshTokenUseCase:
 
         use_case = RefreshTokenUseCase(user_repo=user_repo, jwt_service=jwt_service, blacklist=blacklist)
 
-        result = await use_case.execute(RefreshTokenDTO(refresh_token="some-token"))
+        result = await use_case.execute(
+            RefreshTokenDTO(refresh_token="some-token"),
+            current_user_id=user.id,
+        )
 
         assert result.access_token == "new-access"
         blacklist.add.assert_awaited_once()
@@ -207,7 +224,10 @@ class TestRefreshTokenUseCase:
         use_case = RefreshTokenUseCase(user_repo=AsyncMock(), jwt_service=jwt_service, blacklist=AsyncMock())
 
         with pytest.raises(InvalidTokenError):
-            await use_case.execute(RefreshTokenDTO(refresh_token="access-token-not-refresh"))
+            await use_case.execute(
+                RefreshTokenDTO(refresh_token="access-token-not-refresh"),
+                current_user_id=uuid4(),
+            )
 
     async def test_refresh_fails_when_token_is_blacklisted(self):
         jwt_service = MagicMock()
@@ -221,14 +241,18 @@ class TestRefreshTokenUseCase:
         use_case = RefreshTokenUseCase(user_repo=AsyncMock(), jwt_service=jwt_service, blacklist=blacklist)
 
         with pytest.raises(InvalidTokenError):
-            await use_case.execute(RefreshTokenDTO(refresh_token="blacklisted"))
+            await use_case.execute(
+                RefreshTokenDTO(refresh_token="blacklisted"),
+                current_user_id=uuid4(),
+            )
 
     async def test_refresh_fails_when_user_no_longer_exists(self):
+        user_id = uuid4()
         jwt_service = MagicMock()
         jwt_service.decode_token.return_value = {
             "type": "refresh",
             "jti": "jti",
-            "sub": str(uuid4()),
+            "sub": str(user_id),
         }
         blacklist = AsyncMock()
         blacklist.is_blacklisted.return_value = False
@@ -239,7 +263,32 @@ class TestRefreshTokenUseCase:
         use_case = RefreshTokenUseCase(user_repo=user_repo, jwt_service=jwt_service, blacklist=blacklist)
 
         with pytest.raises(UserNotFoundError):
-            await use_case.execute(RefreshTokenDTO(refresh_token="orphaned"))
+            await use_case.execute(
+                RefreshTokenDTO(refresh_token="orphaned"),
+                current_user_id=user_id,
+            )
+
+    async def test_refresh_fails_when_token_belongs_to_another_user(self):
+        jwt_service = MagicMock()
+        jwt_service.decode_token.return_value = {
+            "type": "refresh",
+            "jti": "jti",
+            "sub": str(uuid4()),
+        }
+        blacklist = AsyncMock()
+        blacklist.is_blacklisted.return_value = False
+
+        use_case = RefreshTokenUseCase(
+            user_repo=AsyncMock(),
+            jwt_service=jwt_service,
+            blacklist=blacklist,
+        )
+
+        with pytest.raises(InvalidTokenError):
+            await use_case.execute(
+                RefreshTokenDTO(refresh_token="stolen-refresh"),
+                current_user_id=uuid4(),
+            )
 
 
 class TestGetUserUseCase:

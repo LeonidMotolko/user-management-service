@@ -11,11 +11,3 @@ repos:
     hooks:
       - id: trailing-whitespace
       - id: end-of-file-fixer
-
-  - repo: local
-    hooks:
-      - id: ty
-        name: ty
-        entry: uv run ty check
-        language: system
-        pass_filenames: false

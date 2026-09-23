@@ -16,7 +16,6 @@ class UserListFilter:
     filter_by_name: str | None = None
     sort_by: SortField = "created_at"
     order_by: OrderDirection = "asc"
-    # None = без ограничения по группе (для ADMIN); задаётся для MODERATOR
     group_id: int | None = None
     restrict_to_group: bool = False
 
@@ -37,6 +36,10 @@ class IUserRepository(ABC):
     @abstractmethod
     async def get_by_username(self, username: str) -> User | None:
         """Get user by username."""
+
+    @abstractmethod
+    async def get_by_phone_number(self, phone_number: str) -> User | None:
+        """Get user by phone number."""
 
     @abstractmethod
     async def update(self, user: User) -> User:

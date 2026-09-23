@@ -24,12 +24,16 @@ class LoginUserUseCase:
         self.jwt_service = jwt_service
 
     async def execute(self, dto: LoginDTO) -> TokenResponseDTO:
-        # Поиск пользователя по email или username
         user = await self.user_repo.get_by_email(dto.login)
         if not user:
             user = await self.user_repo.get_by_username(dto.login)
+        if not user:
+            user = await self.user_repo.get_by_phone_number(dto.login)
 
         if not user or not self.password_hasher.verify(dto.password, user.password_hash):
+            raise InvalidCredentialsError()
+
+        if user.is_blocked:
             raise InvalidCredentialsError()
 
         jti = str(uuid4())

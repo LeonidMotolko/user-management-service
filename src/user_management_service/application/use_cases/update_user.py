@@ -22,6 +22,8 @@ class UpdateUserUseCase:
             user.surname = dto.surname
         if dto.phone_number is not None:
             user.phone_number = dto.phone_number
+        if dto.image_s3_path is not None:
+            user.image_s3_path = dto.image_s3_path
 
         updated_user = await self.user_repo.update(user)
         return UserResponseDTO.model_validate(updated_user)

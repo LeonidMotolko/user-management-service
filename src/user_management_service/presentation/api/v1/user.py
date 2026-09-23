@@ -85,3 +85,18 @@ async def update_user(
         return await use_case.execute(user_id, dto)
     except UserNotFoundError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e)) from e
+
+
+@router.delete(
+    "/{user_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(require_roles(Role.ADMIN))],
+)
+async def delete_user(
+    user_id: UUID,
+    use_case: Annotated[DeleteUserUseCase, Depends(get_delete_user_use_case)],
+):
+    try:
+        await use_case.execute(user_id)
+    except UserNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e)) from e

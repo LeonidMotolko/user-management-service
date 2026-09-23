@@ -12,24 +12,24 @@ class TestUserMe:
         user, _ = await make_user(role=Role.USER)
         headers = auth_headers(jwt_service, user.id, user.role.value)
 
-        response = await client.get("/api/v1/user/me", headers=headers)
+        response = await client.get("/user/me", headers=headers)
 
         assert response.status_code == 200
         assert response.json()["id"] == str(user.id)
 
     async def test_get_me_without_token_returns_401(self, client: AsyncClient):
-        response = await client.get("/api/v1/user/me")
+        response = await client.get("/user/me")
         assert response.status_code == 401
 
     async def test_get_me_with_garbage_token_returns_401(self, client: AsyncClient):
-        response = await client.get("/api/v1/user/me", headers={"Authorization": "Bearer not-a-real-token"})
+        response = await client.get("/user/me", headers={"Authorization": "Bearer not-a-real-token"})
         assert response.status_code == 401
 
     async def test_patch_me_updates_own_data(self, client: AsyncClient, make_user, jwt_service):
         user, _ = await make_user(role=Role.USER)
         headers = auth_headers(jwt_service, user.id, user.role.value)
 
-        response = await client.patch("/api/v1/user/me", json={"name": "NewName"}, headers=headers)
+        response = await client.patch("/user/me", json={"name": "NewName"}, headers=headers)
 
         assert response.status_code == 200
         assert response.json()["name"] == "NewName"
@@ -38,10 +38,10 @@ class TestUserMe:
         user, _ = await make_user(role=Role.USER)
         headers = auth_headers(jwt_service, user.id, user.role.value)
 
-        response = await client.delete("/api/v1/user/me", headers=headers)
+        response = await client.delete("/user/me", headers=headers)
         assert response.status_code == 204
 
-        follow_up = await client.get("/api/v1/user/me", headers=headers)
+        follow_up = await client.get("/user/me", headers=headers)
         assert follow_up.status_code == 401
 
 
@@ -51,7 +51,7 @@ class TestUserByIdAccess:
         target, _ = await make_user(role=Role.USER)
         headers = auth_headers(jwt_service, viewer.id, viewer.role.value)
 
-        response = await client.get(f"/api/v1/user/{target.id}", headers=headers)
+        response = await client.get(f"/user/{target.id}", headers=headers)
         assert response.status_code == 403
 
     async def test_admin_can_view_any_user(self, client: AsyncClient, make_user, jwt_service):
@@ -59,7 +59,7 @@ class TestUserByIdAccess:
         target, _ = await make_user(role=Role.USER)
         headers = auth_headers(jwt_service, admin.id, admin.role.value)
 
-        response = await client.get(f"/api/v1/user/{target.id}", headers=headers)
+        response = await client.get(f"/user/{target.id}", headers=headers)
         assert response.status_code == 200
         assert response.json()["id"] == str(target.id)
 
@@ -69,7 +69,7 @@ class TestUserByIdAccess:
         target, _ = await make_user(role=Role.USER, group_id=group.id)
         headers = auth_headers(jwt_service, moderator.id, moderator.role.value)
 
-        response = await client.get(f"/api/v1/user/{target.id}", headers=headers)
+        response = await client.get(f"/user/{target.id}", headers=headers)
         assert response.status_code == 200
 
     async def test_moderator_gets_403_on_other_group_user(
@@ -81,7 +81,7 @@ class TestUserByIdAccess:
         target, _ = await make_user(role=Role.USER, group_id=group_b.id)
         headers = auth_headers(jwt_service, moderator.id, moderator.role.value)
 
-        response = await client.get(f"/api/v1/user/{target.id}", headers=headers)
+        response = await client.get(f"/user/{target.id}", headers=headers)
         assert response.status_code == 403
 
     async def test_moderator_without_group_gets_403(self, client: AsyncClient, make_user, jwt_service):
@@ -89,7 +89,7 @@ class TestUserByIdAccess:
         target, _ = await make_user(role=Role.USER)
         headers = auth_headers(jwt_service, moderator.id, moderator.role.value)
 
-        response = await client.get(f"/api/v1/user/{target.id}", headers=headers)
+        response = await client.get(f"/user/{target.id}", headers=headers)
         assert response.status_code == 403
 
     async def test_get_nonexistent_user_returns_404_for_admin(self, client: AsyncClient, make_user, jwt_service):
@@ -98,7 +98,7 @@ class TestUserByIdAccess:
         admin, _ = await make_user(role=Role.ADMIN)
         headers = auth_headers(jwt_service, admin.id, admin.role.value)
 
-        response = await client.get(f"/api/v1/user/{uuid.uuid4()}", headers=headers)
+        response = await client.get(f"/user/{uuid.uuid4()}", headers=headers)
         assert response.status_code == 404
 
 
@@ -108,7 +108,7 @@ class TestUserByIdUpdate:
         target, _ = await make_user(role=Role.USER)
         headers = auth_headers(jwt_service, admin.id, admin.role.value)
 
-        response = await client.patch(f"/api/v1/user/{target.id}", json={"name": "PatchedByAdmin"}, headers=headers)
+        response = await client.patch(f"/user/{target.id}", json={"name": "PatchedByAdmin"}, headers=headers)
         assert response.status_code == 200
         assert response.json()["name"] == "PatchedByAdmin"
 
@@ -120,7 +120,7 @@ class TestUserByIdUpdate:
         target, _ = await make_user(role=Role.USER, group_id=group.id)
         headers = auth_headers(jwt_service, moderator.id, moderator.role.value)
 
-        response = await client.patch(f"/api/v1/user/{target.id}", json={"name": "ShouldFail"}, headers=headers)
+        response = await client.patch(f"/user/{target.id}", json={"name": "ShouldFail"}, headers=headers)
         assert response.status_code == 403
 
     async def test_user_cannot_patch_other_user(self, client: AsyncClient, make_user, jwt_service):
@@ -128,7 +128,7 @@ class TestUserByIdUpdate:
         target, _ = await make_user(role=Role.USER)
         headers = auth_headers(jwt_service, viewer.id, viewer.role.value)
 
-        response = await client.patch(f"/api/v1/user/{target.id}", json={"name": "ShouldFail"}, headers=headers)
+        response = await client.patch(f"/user/{target.id}", json={"name": "ShouldFail"}, headers=headers)
         assert response.status_code == 403
 
 
@@ -139,7 +139,7 @@ class TestUsersList:
         await make_user(role=Role.USER)
         headers = auth_headers(jwt_service, admin.id, admin.role.value)
 
-        response = await client.get("/api/v1/users?page=1&limit=50", headers=headers)
+        response = await client.get("/users?page=1&limit=50", headers=headers)
 
         assert response.status_code == 200
         body = response.json()
@@ -153,7 +153,7 @@ class TestUsersList:
         await make_user(role=Role.USER, group_id=group_b.id)
         headers = auth_headers(jwt_service, moderator.id, moderator.role.value)
 
-        response = await client.get("/api/v1/users?page=1&limit=50", headers=headers)
+        response = await client.get("/users?page=1&limit=50", headers=headers)
 
         assert response.status_code == 200
         body = response.json()
@@ -164,7 +164,7 @@ class TestUsersList:
         user, _ = await make_user(role=Role.USER)
         headers = auth_headers(jwt_service, user.id, user.role.value)
 
-        response = await client.get("/api/v1/users", headers=headers)
+        response = await client.get("/users", headers=headers)
         assert response.status_code == 403
 
     async def test_pagination_limits_items_but_not_total(self, client: AsyncClient, make_user, jwt_service):
@@ -173,9 +173,46 @@ class TestUsersList:
             await make_user(role=Role.USER)
         headers = auth_headers(jwt_service, admin.id, admin.role.value)
 
-        response = await client.get("/api/v1/users?page=1&limit=2", headers=headers)
+        response = await client.get("/users?page=1&limit=2", headers=headers)
 
         assert response.status_code == 200
         body = response.json()
         assert len(body["items"]) == 2
         assert body["total"] >= 6
+
+    async def test_filter_by_name_matches_name_or_surname(self, client: AsyncClient, make_user, jwt_service):
+        admin, _ = await make_user(role=Role.ADMIN)
+        await make_user(role=Role.USER, name="UniqueAlice", surname="Smith")
+        await make_user(role=Role.USER, name="Bob", surname="UniqueSurname")
+        await make_user(role=Role.USER, name="Charlie", surname="Brown")
+        headers = auth_headers(jwt_service, admin.id, admin.role.value)
+
+        by_name = await client.get("/users?filter_by_name=UniqueAlice", headers=headers)
+        assert by_name.status_code == 200
+        assert by_name.json()["total"] == 1
+
+        by_surname = await client.get("/users?filter_by_name=UniqueSurname", headers=headers)
+        assert by_surname.status_code == 200
+        assert by_surname.json()["total"] == 1
+
+
+class TestAdminDeleteUser:
+    async def test_admin_can_delete_any_user(self, client: AsyncClient, make_user, jwt_service):
+        admin, _ = await make_user(role=Role.ADMIN)
+        target, _ = await make_user(role=Role.USER)
+        headers = auth_headers(jwt_service, admin.id, admin.role.value)
+
+        response = await client.delete(f"/user/{target.id}", headers=headers)
+        assert response.status_code == 204
+
+        follow_up = await client.get(f"/user/{target.id}", headers=headers)
+        assert follow_up.status_code == 404
+
+    async def test_moderator_cannot_delete_user(self, client: AsyncClient, make_user, make_group, jwt_service):
+        group = await make_group()
+        moderator, _ = await make_user(role=Role.MODERATOR, group_id=group.id)
+        target, _ = await make_user(role=Role.USER, group_id=group.id)
+        headers = auth_headers(jwt_service, moderator.id, moderator.role.value)
+
+        response = await client.delete(f"/user/{target.id}", headers=headers)
+        assert response.status_code == 403
