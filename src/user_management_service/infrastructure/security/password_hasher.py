@@ -1,4 +1,5 @@
 import hashlib
+import hmac
 import os
 
 from user_management_service.application.interfaces.password_hasher import (
@@ -10,7 +11,7 @@ class PBKDF2PasswordHasher(IPasswordHasher):
     def __init__(
         self,
         algorithm: str = "sha256",
-        iterations: int = 100000,
+        iterations: int = 600000,
         salt_length: int = 16,
     ) -> None:
         self.algorithm = algorithm
@@ -39,6 +40,6 @@ class PBKDF2PasswordHasher(IPasswordHasher):
                 salt,
                 self.iterations,
             )
-            return hashlib.bytes_eq(new_hash, expected_hash)
+            return hmac.compare_digest(new_hash, expected_hash)
         except (ValueError, TypeError):
             return False
