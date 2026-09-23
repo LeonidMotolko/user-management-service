@@ -38,6 +38,9 @@ class CreateUserUseCase:
         if await self.user_repo.get_by_username(dto.username):
             raise UserAlreadyExistsError("username", dto.username)
 
+        if dto.phone_number and await self.user_repo.get_by_phone_number(dto.phone_number):
+            raise UserAlreadyExistsError("phone_number", dto.phone_number)
+
         group = None
         if dto.group_id:
             if not self.group_repo:

@@ -74,6 +74,12 @@ class SQLAlchemyUserRepository(IUserRepository):
         model = result.scalar_one_or_none()
         return self._to_entity(model) if model else None
 
+    async def get_by_phone_number(self, phone_number: str) -> User | None:
+        stmt = select(UserModel).options(selectinload(UserModel.group)).where(UserModel.phone_number == phone_number)
+        result = await self.session.execute(stmt)
+        model = result.scalar_one_or_none()
+        return self._to_entity(model) if model else None
+
     async def update(self, user: User) -> User:
         stmt = select(UserModel).options(selectinload(UserModel.group)).where(UserModel.id == user.id)
         result = await self.session.execute(stmt)
@@ -108,7 +114,6 @@ class SQLAlchemyUserRepository(IUserRepository):
             pattern = f"%{filters.filter_by_name}%"
             conditions.append(or_(UserModel.name.ilike(pattern), UserModel.surname.ilike(pattern)))
         if filters.restrict_to_group:
-            # MODERATOR: если у него самого нет группы — он не должен видеть никого
             conditions.append(UserModel.group_id == filters.group_id if filters.group_id is not None else False)
 
         sort_column = getattr(UserModel, filters.sort_by)

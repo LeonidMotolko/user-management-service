@@ -11,6 +11,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from user_management_service.application.interfaces.message_publisher import (
     IMessagePublisher,
 )
+from user_management_service.application.interfaces.object_storage import (
+    IObjectStorage,
+)
 from user_management_service.application.interfaces.password_hasher import (
     IPasswordHasher,
 )
@@ -65,8 +68,9 @@ from user_management_service.infrastructure.security.password_hasher import (
 from user_management_service.infrastructure.security.token_blacklist import (
     RedisTokenBlacklist,
 )
+from user_management_service.infrastructure.storage.s3 import S3ObjectStorage
 
-security = HTTPBearer()
+security = HTTPBearer(auto_error=False)
 
 # --- Infrastructure Dependencies ---
 
@@ -96,6 +100,18 @@ def get_token_blacklist(
 
 def get_password_hasher() -> IPasswordHasher:
     return PBKDF2PasswordHasher()
+
+
+def get_object_storage() -> IObjectStorage:
+    access_key = settings.AWS_ACCESS_KEY_ID.get_secret_value() if settings.AWS_ACCESS_KEY_ID else None
+    secret_key = settings.AWS_SECRET_ACCESS_KEY.get_secret_value() if settings.AWS_SECRET_ACCESS_KEY else None
+    return S3ObjectStorage(
+        bucket=settings.AWS_S3_BUCKET,
+        region=settings.AWS_REGION,
+        endpoint_url=settings.AWS_S3_ENDPOINT_URL or None,
+        access_key_id=access_key or None,
+        secret_access_key=secret_key or None,
+    )
 
 
 def get_user_repository(
@@ -187,10 +203,17 @@ def get_request_password_reset_use_case(
 
 
 async def get_current_user(
-    credentials: Annotated[HTTPAuthorizationCredentials, Depends(security)],
+    credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(security)],
     jwt_service: Annotated[JWTService, Depends(get_jwt_service)],
     user_repo: Annotated[IUserRepository, Depends(get_user_repository)],
 ) -> User:
+    if credentials is None or not credentials.credentials:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Could not validate credentials",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
     token = credentials.credentials
     try:
         payload = jwt_service.decode_token(token)

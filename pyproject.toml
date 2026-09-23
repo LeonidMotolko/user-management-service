@@ -9,15 +9,18 @@ authors = [
 requires-python = ">=3.13"
 dependencies = [
     "aio-pika>=9.5.5",
+    "aioboto3>=15.5.0",
     "alembic>=1.19.1",
     "asyncpg>=0.31.0",
     "email-validator>=2.2.0",
     "fastapi>=0.141.1",
+    "httpx>=0.28.1",
     "pydantic>=2.13.4",
     "pydantic-settings>=2.15.0",
     "pyjwt>=2.13.0",
     "redis>=8.1.0",
     "sqlalchemy>=2.0.52",
+    "uvicorn>=0.53.0",
 ]
 
 [project.scripts]
@@ -33,6 +36,7 @@ dev = [
     "alembic>=1.19.1",
     "pre-commit>=4.6.1",
     "pytest>=9.1.1",
+    "pytest-asyncio>=1.0.0",
     "ruff>=0.16.1",
     "ty>=0.0.68",
 ]
@@ -40,6 +44,12 @@ dev = [
 [tool.ruff]
 line-length = 120
 target-version = "py313"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "session"
+asyncio_default_test_loop_scope = "session"
+testpaths = ["tests"]
 
 [tool.ruff.lint]
 select = [
@@ -57,4 +67,4 @@ select = [
 python-version = "3.13"
 
 [tool.ty.src]
-include = ["scr"]
+include = ["src"]

@@ -49,6 +49,8 @@ class UpdateUserDTO(BaseModel):
     name: str | None = None
     surname: str | None = None
     phone_number: str | None = None
+    image_s3_path: str | None = None
+
 
 
 class UserResponseDTO(BaseModel):

@@ -1,3 +1,4 @@
+from time import time
 from uuid import UUID, uuid4
 
 import jwt
@@ -25,7 +26,7 @@ class RefreshTokenUseCase:
         self.jwt_service = jwt_service
         self.blacklist = blacklist
 
-    async def execute(self, dto: RefreshTokenDTO) -> TokenResponseDTO:
+    async def execute(self, dto: RefreshTokenDTO, current_user_id: UUID) -> TokenResponseDTO:
         try:
             payload = self.jwt_service.decode_token(dto.refresh_token)
         except jwt.PyJWTError as e:
@@ -39,14 +40,15 @@ class RefreshTokenUseCase:
             raise InvalidTokenError("Token is blacklisted.")
 
         user_id = UUID(payload["sub"])
+        if user_id != current_user_id:
+            raise InvalidTokenError("Refresh token does not belong to the current user.")
+
         user = await self.user_repo.get_by_id(user_id)
         if not user:
             raise UserNotFoundError(str(user_id))
 
         exp = payload.get("exp", 0)
-        import time
-
-        ttl = int(exp - time.time())
+        ttl = int(exp - time())
         if ttl > 0:
             await self.blacklist.add(jti, ttl)
 
