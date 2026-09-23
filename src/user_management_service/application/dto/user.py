@@ -52,6 +52,7 @@ class UpdateUserDTO(BaseModel):
     image_s3_path: str | None = None
 
 
+
 class UserResponseDTO(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
