@@ -41,6 +41,7 @@ class IUserRepository(ABC):
     async def get_by_phone_number(self, phone_number: str) -> User | None:
         """Get user by phone number."""
 
+    @abstractmethod
     async def update(self, user: User) -> User:
         """Update user"""
 
